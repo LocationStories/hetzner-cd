@@ -1,0 +1,31 @@
+---
+- name: Get uid of "{{ api_product_user }}"
+  block:
+    - command: id -u "{{ api_product_user }}"
+      register: result
+    - set_fact: api_product_uid={{ result.stdout }}
+
+- name: Get gid of "{{ api_product_user }}"
+  block:
+    - ansible.builtin.command: id -g "{{ api_product_user }}"
+      register: result
+    - ansible.builtin.set_fact: api_product_gid={{ result.stdout }}
+
+- name: Create Cobrainer API product home directory "{{ api_product_home }}"
+  file:
+    path: "{{ api_product_home }}"
+    state: directory
+    owner: "{{ api_product_user }}"
+    group: "{{ api_product_group }}"
+  become: true
+
+# Must leave postgres/data dir for postgres container to create
+# otherwise the directory ownership will cause issues
+- name: Create PostgreSQL directories
+  ansible.builtin.file:
+    path: "{{ api_product_home }}/{{ item }}"
+    state: directory
+    owner: "{{ api_product_user }}"
+    group: "{{ api_product_group }}"
+    recurse: true
+  with_items: ["postgres/conf"]

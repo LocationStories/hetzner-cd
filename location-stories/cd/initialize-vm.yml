@@ -1,0 +1,14 @@
+---
+- name: Initialize a newly created Hetzner cloud virtual machine
+  hosts: hetzner-cloud-new-vm
+  remote_user: root
+  vars:
+    api_product_user: locsty
+    api_product_group: locsty
+    ls_home: /locsty
+    api_product_home: "{{ ls_home }}/api"
+  roles:
+    - disk-partition
+    - common
+    - geerlingguy.security
+    - pre-installation

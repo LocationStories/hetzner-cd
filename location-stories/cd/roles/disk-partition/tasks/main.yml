@@ -1,0 +1,15 @@
+---
+# tasks file for disk-partition
+- name: "Get UUID for partition"
+  block:
+    - ansible.builtin.command: "blkid -s UUID -o value {{ datadisk_dev_path }}"
+      register: disk_blkid
+    - ansible.builtin.set_fact: datadisk_partition_uuid={{ disk_blkid.stdout }}
+
+- name: "Mount the data disk partition with UUID {{ datadisk_partition_uuid }}"
+  ansible.posix.mount:
+    path: "{{ ls_home }}"
+    fstype: ext4
+    opts: defaults,nofail
+    src: "UUID={{ datadisk_partition_uuid }}"
+    state: mounted

@@ -1,0 +1,121 @@
+---
+- name: Install apt packages
+  apt:
+    name: "{{ item }}"
+    state: latest
+  loop: "{{ (apt_packages)|flatten(levels=1) }}"
+
+- name: Install other system packages required by Docker
+  apt:
+    pkg: "{{ item.package }}"
+    state: latest
+    update_cache: true
+  with_items: "{{ docker_prerequisite_packages_Ubuntu }}"
+
+- name: Remove previous docker installation
+  apt:
+    name: "{{ item.package }}"
+    state: absent
+  with_items: "{{ docker_cleanup_packages_Ubuntu }}"
+
+- name: Add Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker Repository
+  apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu focal stable
+    state: present
+
+- name: Update apt and install docker-ce
+  apt:
+    name: docker-ce
+    state: latest
+    update_cache: true
+
+- name: Create group docker
+  group:
+    name: docker
+    state: present
+
+- name: Create group "{{ loc }}"
+  group:
+    name: "{{ api_product_group }}"
+    state: present
+
+- name: Allow "{{ api_product_group }}" group to have passwordless sudo
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%{{ api_product_group }}'
+    line: '%{{ api_product_group }} ALL=(ALL) NOPASSWD: ALL'
+    validate: 'visudo -cf %s'
+
+- name: Create user "{{ api_product_user }}"
+  user:
+    name: "{{ api_product_user }}"
+    state: present
+    groups: "{{ api_product_group }},docker,sudo"
+
+- name: Add necessary public keys to the created instance
+  authorized_key:
+    user: "{{ api_product_user }}"
+    state: present
+    key: "{{ item }}"
+  with_items: "{{ ssh_pub_keys }}"
+
+- name: Set hostname variable
+  set_fact:
+    ls_hostname: "{{ inventory_hostname }}"
+
+- name: Change hostname to "{{ ls_hostname }}"
+  block:
+    - hostname:
+        name: "{{ ls_hostname }}"
+    - command: sh -c 'echo "{{ ls_hostname }}" > /etc/hostname'
+    - lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.0\.1[ \t]+localhost'
+        line: '127.0.0.1 localhost {{ ls_hostname }}'
+        state: present
+
+# ref: https://community.hetzner.com/tutorials/install-and-configure-ntp
+- name: Configure NTP service on Hetzner machines
+  copy:
+    src: ntp.conf
+    dest: /etc/ntp.conf
+
+- name: Reboot node
+  reboot:
+    reboot_timeout: 1800
+
+- name: Stop unattended-upgrades.service for the time being
+  systemd:
+    name: unattended-upgrades
+    enabled: yes
+    masked: yes
+    state: stopped
+
+- name: Wait for automatic system updates
+  shell: while pgrep unattended; do sleep 10; done;
+
+- name: "Wait for {{ ls_home }} to be mounted"
+  wait_for:
+    path: "{{ ls_home }}"
+    state: present
+    msg: Timeout to mount "{{ ls_home }}"
+
+- name: Remove useless packages from the cache (apt)
+  block:
+    - apt:
+        autoclean: yes
+    - apt:
+        autoremove: yes
+
+- name: Start unattended-upgrades.service again
+  systemd:
+    name: unattended-upgrades
+    enabled: yes
+    masked: no
+    state: started

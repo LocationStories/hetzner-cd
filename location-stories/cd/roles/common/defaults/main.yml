@@ -1,0 +1,31 @@
+---
+# defaults file for common
+apt_packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - software-properties-common
+  - ntp
+  - git
+  - tmux
+  - tree
+  - pwgen
+  - uuid-runtime
+  - vim
+  - unzip
+  - jq
+  - fail2ban
+
+docker_prerequisite_packages_Ubuntu:
+  - {package: "apt-transport-https"}
+  - {package: "ca-certificates"}
+  - {package: "curl"}
+  - {package: "software-properties-common"}
+
+docker_cleanup_packages_Ubuntu:
+  - {package: "docker.io"}
+  - {package: "docker-engine"}
+  - {package: "containerd"}
+
+ssh_pub_keys:
+  - "{{ lookup('file', 'pubkeys/ansible.pub') }}"

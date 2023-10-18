@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "hetzner-cd"
+version = "0.1.0"
+description = ""
+authors = ["Lu Liu <nudtlliu@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+ansible = "^8.5.0"
+molecule = "^6.0.2"
+ansible-lint = { version = "^6.9.0", markers = "platform_system != 'Windows'" }
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
